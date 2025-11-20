@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="id">
+<head><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budaya Lamongan 3D Explorer</title>
+    <!-- Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Three.js and OrbitControls -->
+    
+    <style>
+        /* Mengatur font Poppins untuk judul dan Inter untuk konten */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;600&display=swap');
+
+        .font-poppins { font-family: 'Poppins', sans-serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+
+        /* Warna Palet */
+        .color-primary { color: #0B6EAF; } /* Biru Lautan */
+        .bg-primary { background-color: #0B6EAF; }
+        .color-accent { color: #E9C46A; } /* Emas */
+        .bg-accent { background-color: #E9C46A; }
+        .bg-krem { background-color: #F4ECDC; } /* Krem Background */
+        .text-dark { color: #2B2B2B; } /* Hitam Halus */
+
+        /* Custom Wave Pattern for Background (Etnik-Modern) */
+        .wave-pattern {
+            background-image: radial-gradient(circle at 10% 50%, rgba(11, 110, 175, 0.05), transparent 40%),
+                              radial-gradient(circle at 90% 50%, rgba(233, 196, 106, 0.08), transparent 40%);
+            background-size: 800px 600px;
+        }
+        
+        /* 3D Viewer Canvas Style */
+        #viewer3d-canvas {
+            width: 100%;
+            height: 60vh;
+            display: block;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            background-color: #2B2B2B; /* Warna gelap untuk kontras 3D */
+        }
+        
+        /* Smooth Transition for SPA Navigation */
+        .page {
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: none;
+        }
+
+        .page.active {
+            opacity: 1;
+            display: block;
+        }
+
+        /* Card Hover Effect */
+        .culture-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(11, 110, 175, 0.2);
+        }
+
+        /* Logo in Navbar */
+        .navbar-logo {
+            height: 40px; /* Adjust as needed */
+            width: auto;
+            border-radius: 9999px; /* Make it circular */
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+        }
+    </style>
+</head>
+<body class="bg-krem font-inter text-dark min-h-screen">
+
+    <!-- Navbar Transparan Etnik-Modern -->
+        <nav id="navbar" class="fixed w-full z-30 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0">
+                    <span class="font-poppins text-2xl font-bold color-primary">LA <span class="color-accent">Explor></span>
+                </div>
+                <div class="flex items-center">
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#" onclick="showPage('home')" class="nav-item color-primary hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition duration-150">Beranda</a>
+                            <a href="#" onclick="showPage('storytelling')" class="nav-item color-primary hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition duration-150">Storytelling</a>
+                            <a href="#" onclick="showPage('viewer3d')" class="nav-item color-primary hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition duration-150">3D Viewer</a>
+                            <a href="#" onclick="showPage('gallery')" class="nav-item color-primary hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition duration-150">Galeri</a>
+                            <a href="#" onclick="showPage('quiz')" class="nav-item color-primary hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition duration-150">Mini Quiz</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button id="menu-button" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-dark hover:text-primary hover:bg-gray-100 focus:outline-none" aria-controls="mobile-menu" aria-expanded="false">
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile menu, show/hide based on menu state. --><div class="md:hidden absolute bg-white/95 backdrop-blur-sm w-full transition-all duration-300 overflow-hidden max-h-0" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#" onclick="showPage('home')" class="nav-item block px-3 py-2 rounded-md text-base font-medium color-primary hover:bg-gray-100">Beranda</a>
+                <a href="#" onclick="showPage('storytelling')" class="nav-item block px-3 py-2 rounded-md text-base font-medium color-primary hover:bg-gray-100">Storytelling</a>
+                <a href="#" onclick="showPage('viewer3d')" class="nav-item block px-3 py-2 rounded-md text-base font-medium color-primary hover:bg-gray-100">3D Viewer</a>
+                <a href="#" onclick="showPage('gallery')" class="nav-item block px-3 py-2 rounded-md text-base font-medium color-primary hover:bg-gray-100">Galeri</a>
+                <a href="#" onclick="showPage('quiz')" class="nav-item block px-3 py-2 rounded-md text-base font-medium color-primary hover:bg-gray-100">Mini Quiz</a>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="pt-20">
+        <div id="content-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+            <!-- ============================== 1. HOMEPAGE ============================== --><section id="home" class="page active">
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden p-8 sm:p-16 relative wave-pattern">
+                    <div class="lg:flex items-center justify-between">
+                        <div class="lg:w-1/2">
+                            <h1 class="font-poppins text-4xl sm:text-6xl font-extrabold mb-4 leading-tight">
+                                Jelajahi Budaya <span class="color-primary">Lamongan</span> dalam <span class="color-accent">3D</span>
+                            </h1>
+                            <p class="text-lg mb-8 font-inter text-dark/80">
+                                Kenali Lamongan lewat cerita, makanan khas, dan benda-benda bersejarah yang ditampilkan dengan visual kekinian dan model 3D yang bisa kamu eksplor.
+                            </p>
+                            <button onclick="showPage('storytelling')" class="bg-accent hover:bg-yellow-500 text-dark font-poppins font-semibold py-4 px-10 rounded-full shadow-lg transition duration-300 transform hover:scale-105">
+                                Mulai Jelajah Budaya →
+                            </button>
+                        </div>
+                        <div class="lg:w-1/2 mt-10 lg:mt-0 flex justify-center">
+                             <!-- Placeholder Image of Lamongan Culture --><img src="https://i.imgur.com/Ylii6mV.png"
+                                 onerror="this.onerror=null;this.src=hts//i.imgur.com/kEZMXeW.png"
+                                 class="rounded-full shadow-2xl border-4 border-accent w-64 h-64 sm:w-80 sm:h-80 object-cover transform hover:rotate-3 transition duration-500" alt="Ikon Budaya Lamongan" />
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="font-poppins text-3xl font-bold text-center mt-16 mb-8 color-primary">Temukan Kekayaan Lamongan</h2>
+                
+                <!-- Grid 4 Kolom - Elemen Budaya --><div class="grid md:grid-cols-4 gap-6">
+                    <div class="culture-card bg-white p-6 rounded-2xl shadow-md transition duration-300 ease-in-out cursor-pointer" onclick="showStory('legenda')">
+                        <div class="text-5xl mb-3 color-accent">
+                            <span class="inline-block">📜</span>
+                        </div>
+                        <h3 class="font-poppins text-xl font-semibold mb-2 text-dark">Legenda</h3>
+                        <p class="text-sm font-inter text-dark/70">Keberanian Sejati Kadet Soewoko, Kisah Pahlawan Rakyat.</p>
+                    </div>
+                    <div class="culture-card bg-white p-6 rounded-2xl shadow-md transition duration-300 ease-in-out cursor-pointer" onclick="showStory('kuliner')">
+                        <div class="text-5xl mb-3 color-accent">
+                            <span class="inline-block">🍜</span>
+                        </div>
+                        <h3 class="font-poppins text-xl font-semibold mb-2 text-dark">Kuliner</h3>
+                        <p class="text-sm font-inter text-dark/70">Soto Lamongan, Nasi Boran.</p>
+                    </div>
+                    <div class="culture-card bg-white p-6 rounded-2xl shadow-md transition duration-300 ease-in-out cursor-pointer" onclick="showStory('wisata')">
+                        <div class="text-5xl mb-3 color-accent">
+                            <span class="inline-block">🏖️</span>
+                        </div>
+                        <h3 class="font-poppins text-xl font-semibold mb-2 text-dark">Wisata</h3>
+                        <p class="text-sm font-inter text-dark/70">WBL, Maharani Zoo, hingga Pantai Kutang.</p>
+                    </div>
+                    <div class="culture-card bg-white p-6 rounded-2xl shadow-md transition duration-300 ease-in-out cursor-pointer" onclick="showStory('seni')">
+                        <div class="text-5xl mb-3 color-accent">
+                            <span class="inline-block">🎭</span>
+                        </div>
+                        <h3 class="font-poppins text-xl font-semibold mb-2 text-dark">Seni Tradisi</h3>
+                        <p class="text-sm font-inter text-dark/70">Tari Boran, dan kesenian khas Lamongan lainnya.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== 2. STORYTELLING ============================== --><section id="storytelling" class="page">
+                <h2 class="font-poppins text-4xl font-bold mb-8 color-primary text-center">Storytelling Budaya Lamongan</h2>
+                <div class="bg-white p-8 rounded-3xl shadow-xl">
+                    <div id="story-content">
+                        <!-- Konten Story akan diisi oleh JS --></div>
+                </div>
+
+                <div class="flex justify-between mt-8">
+                    <button id="prev-story" class="bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition duration-300 opacity-50 cursor-not-allowed">
+                        ← Cerita Sebelumnya
+                    </button>
+                    <button id="next-story" class="bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition duration-300">
+                        Cerita Selanjutnya →
+                    </button>
+                    <button id="to-3d-viewer" onclick="showPage('viewer3d')" class="bg-accent hover:bg-yellow-500 text-dark font-semibold py-3 px-6 rounded-full shadow-lg transition duration-300">
+                        Lihat Objek 3D
+                    </button>
+                </div>
+            </section>
+
+            <!-- ============================== 3. 3D VIEWER ============================== --><section id="viewer3d" class="page">
+                <h2 class="font-poppins text-4xl font-bold mb-8 color-primary text-center">3D Explorer: Monumen Lamongan</h2>
+                
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <canvas id="viewer3d-canvas"></canvas>
+                    </div>
+                    <div class="lg:col-span-1 bg-white p-6 rounded-3xl shadow-xl">
+                        <h3 id="object-name" class="font-poppins text-2xl font-bold color-primary mb-3">Miniatur Monumen Lamongan</h3>
+                        <p class="font-inter text-dark/80 mb-4">
+                            Objek 3D placeholder ini mewakili ikon Lamongan. Gunakan mouse untuk memutar (drag) dan zoom (scroll) model untuk melihat detailnya dari berbagai sudut.
+                        </p>
+                        <ul class="list-disc pl-5 text-sm space-y-2 text-dark/70">
+                            <li>Teknologi: Three.js</li>
+                            <li>Model: Placeholder Monumen (Geo Sederhana)</li>
+                            <li>Interaksi: Auto-Spin, Drag, Zoom</li>
+                        </ul>
+
+                        <button class="w-full mt-6 bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition duration-300 opacity-50 cursor-not-allowed">
+                            Kunjungi Lokasi di Peta (Fitur Segera Hadir)
+                        </button>
+                        <p class="text-center text-xs mt-2 text-dark/50">Simulasi objek 3D menggunakan Three.js.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== 4. GALLERY ============================== --><section id="gallery" class="page">
+                <h2 class="font-poppins text-4xl font-bold mb-8 color-primary text-center">Galeri Foto Lamongan Menakjubkan</h2>
+                
+                <div class="flex justify-center mb-6 space-x-4">
+                    <button class="gallery-filter-btn bg-accent text-dark font-semibold py-2 px-6 rounded-full transition duration-200 shadow-md">Semua</button>
+                    <button class="gallery-filter-btn bg-white hover:bg-gray-100 text-dark py-2 px-6 rounded-full transition duration-200 shadow-md">Kuliner</button>
+                    <button class="gallery-filter-btn bg-white hover:bg-gray-100 text-dark py-2 px-6 rounded-full transition duration-200 shadow-md">Wisata</button>
+                    <button class="gallery-filter-btn bg-white hover:bg-gray-100 text-dark py-2 px-6 rounded-full transition duration-200 shadow-md">Tradisi</button>
+                </div>
+
+                <!-- Grid 3 Kolom Responsif --><div id="gallery-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/U3TopMS.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Soto Lamongan</p></div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/ClvQoGR.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Wisata Bahari Lamongan</p></div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/jvdGPLN.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Nikmatnya Wingko Babat</p></div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/t0WMubQ.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Pantai Kutang Eksotis</p></div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/KobPKMR.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Kerajinan Gerabah</p></div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/fzZ5S9e.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Nasi Boranan</p></div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02]">
+                        <img src="https://i.imgur.com/7GIpNcH.jpeg" class="w-full h-auto object-cover" alt="">
+                        <div class="p-4 bg-white"><p class="font-poppins font-semibold text-lg">Tari Boranan</p></div>
+                </div>
+            </section>
+
+            <!-- ============================== 5. MINI QUIZ ============================== --><section id="quiz" class="page">
+                <h2 class="font-poppins text-4xl font-bold mb-8 color-primary text-center">Mini Quiz Budaya Lamongan</h2>
+                <div class="bg-white p-8 rounded-3xl shadow-xl max-w-3xl mx-auto">
+                    
+                    <div id="quiz-area">
+                        <p id="question-text" class="font-poppins text-xl font-semibold mb-6 text-dark"></p>
+                        <div id="options-container" class="space-y-3">
+                            <!-- Options will be loaded here --></div>
+                        <button id="submit-quiz" class="mt-8 bg-accent hover:bg-yellow-500 text-dark font-semibold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
+                            Jawab
+                        </button>
+                    </div>
+
+                    <div id="result-area" class="text-center hidden">
+                        <h3 class="font-poppins text-3xl font-bold mb-4 color-primary">Hasil Quiz Anda</h3>
+                        <p class="font-inter text-2xl mb-4">Skor: <span id="score-display" class="font-extrabold color-accent">0/0</span></p>
+                        <p id="badge-message" class="font-poppins text-xl mt-6"></p>
+                        <button onclick="resetQuiz()" class="mt-8 bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full transition duration-300">
+                            Coba Lagi
+                        </button>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer --><footer class="bg-primary text-white mt-16 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="font-poppins text-lg font-semibold">Lamongan 3D Explorer &copy; 2025</p>
+            <p class="text-sm mt-2 font-inter">Dibuat dengan semangat Etnik-Modern untuk memperkenalkan budaya Lamongan.</p>
+        </div>
+    </footer>
+
+    <script>
+        // =================================================================================
+        // JAVASCRIPT: LOGIKA NAVIGASI (SPA)
+        // =================================================================================
+        function showPage(pageId) {
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => {
+                page.classList.remove('active');
+                page.style.display = 'none'; // Tambahkan ini untuk kompatibilitas
+            });
+
+            const activePage = document.getElementById(pageId);
+            if (activePage) {
+                activePage.style.display = 'block';
+                // Delay untuk transisi
+                setTimeout(() => activePage.classList.add('active'), 10);
+            }
+
+            // Atur ulang Quiz jika kembali ke halaman lain
+            if (pageId !== 'quiz') {
+                document.getElementById('result-area').classList.add('hidden');
+                document.getElementById('quiz-area').classList.remove('hidden');
+            }
+
+            // Inisialisasi 3D jika masuk ke halaman viewer3d
+            if (pageId === 'viewer3d') {
+                initThreeJS()
+            
+
+            }
+
+            // Tutup menu mobile jika terbuka
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (mobileMenu.classList.contains('max-h-96')) {
+                toggleMobileMenu();
+            }
+
+            // Scroll ke atas
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Toggle Menu Mobile
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            const button = document.getElementById('menu-button');
+            if (mobileMenu.classList.contains('max-h-96')) {
+                mobileMenu.classList.remove('max-h-96');
+                mobileMenu.classList.add('max-h-0');
+            } else {
+                mobileMenu.classList.remove('max-h-0');
+                mobileMenu.classList.add('max-h-96');
+            }
+        }
+        document.getElementById('menu-button').addEventListener('click', toggleMobileMenu);
+
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('bg-white', 'shadow-md');
+                navbar.classList.remove('bg-transparent');
+            } else {
+                navbar.classList.remove('bg-white', 'shadow-md');
+                navbar.classList.add('bg-transparent');
+            }
+        });
+
+        // =================================================================================
+        // JAVASCRIPT: LOGIKA STORYTELLING
+        // =================================================================================
+        const stories = {
+            legenda: {
+                title: "Kadet Soewoko",
+                image: "https://i.imgur.com/CBEfSM3.jpeg", // Image 2: Kadet Soewoko
+                content: `
+                    <h3 class="font-poppins text-3xl font-bold mb-4 color-accent">Pahlawan Rakyat Lamongan</h3>Kadet Soewoko adalah sosok penting dari Lamongan yang lahir di Desa Lumbangsari, Krebet, Malang, pada 1 Januari 1928. Ia dikenal sebagai pejuang yang aktif dalam pergerakan kemerdekaan Indonesia, terutama dalam melawan penjajahan Belanda. Sebagai Komandan Regu 1 di Kodim 0812 Lamongan, Soewoko memimpin pasukannya dengan semangat, meskipun mereka hanya memiliki tujuh senjata rampasan Jepang. Momen heroiknya terjadi pada 9 Maret 1949, ketika ia menyerang truk Belanda yang terperosok di Desa Gumantuk. Meski berani, perjuangannya harus dibayar mahal; ia gugur pada usia 21 tahun dan dimakamkan di TMP Kusuma Bangsa Lamongan. Untuk mengenang jasa-jasanya, masyarakat setempat mendirikan patung Kadet Soewoko pada tahun 1975. Hingga kini, ia tetap menjadi inspirasi bagi generasi muda untuk mencintai budaya dan meningkatkan pendidikan di daerahnya, dengan acara napak tilas yang diadakan setiap tahun untuk mengenang perjalanannya.</p>
+                    
+                    <h4 class="font-poppins text-2xl font-semibold mb-3 color-primary">Keberanian Sejati</h4>
+                    <p class="mb-4">Kadet Soewoko adalah contoh keberanian sejati, yang dengan semangat juang mempertaruhkan segalanya demi kemerdekaan. Namanya hidup dalam ingatan kita, mengingatkan bahwa setiap individu dapat menjadi pahlawan dengan tindakan yang berani.</p>
+                    <p class="italic border-l-4 border-accent pl-4 py-2 bg-gray-50 rounded-lg">Ingatlah bahwa setiap tindakan kecil dapat memberikan dampak besar. Seperti Kadet Soewoko, beranilah untuk berjuang demi apa yang kamu percayai, karena keberanian dalam menghadapi tantangan adalah kunci untuk mengubah dunia di sekitarmu.</p>
+                `
+            },
+            kuliner: {
+                title: "Soto Lamongan dan Nasi Boran",
+                image: "https://i.imgur.com/EjMjFDg.jpeg", 
+                content: `
+                    <h3 class="font-poppins text-3xl font-bold mb-4 color-accent">Raja Kuliner Khas Lamongan</h3>
+                    <p class="mb-4 text-lg">Tidak ada yang bisa menandingi kelezatan Soto Lamongan. Kuahnya yang kaya rempah, koya (serbuk kerupuk udang) yang gurih, dan irisan daging ayam membuat cita rasanya tak terlupakan. Ketenarannya telah menyebar ke seluruh Nusantara, Makanan ini sangat populer di daerah tersebut dan dikenal karena kuahnya yang segar serta bumbu yang kaya akan rempah. Soto Lamongan umumnya menggunakan bahan dasar daging ayam yang dimasak dalam kuah kaldu yang bening dan harum.Soto ini juga sering disajikan dengan tambahan telur rebus, kerupuk, dan bawang goreng. Penyajiannya biasanya dilengkapi dengan nasi putih, sambal, dan jeruk nipis yang menambah kenikmatan. Keberadaan Soto Lamongan tidak hanya membuat lidah bergetar, tetapi juga mencerminkan kekayaan budaya kuliner Indonesia yang beragam. Makanan ini menjadi salah satu kebanggaan daerah Lamongan dan banyak dicari oleh wisatawan yang berkunjung.</p>
+                    <h4 class="font-poppins text-2xl font-semibold mb-3 color-primary">Nasi Boran</h4>
+                    <p class="mb-4">Selain Soto, Nasi Boran menawarkan kombinasi rasa yang unikNasi Boran adalah makanan tradisional khas Lamongan, Jawa Timur, yang namanya berasal dari wadah nasi berbentuk anyaman bambu yang digendong di punggung penjual. Diperkirakan muncul sekitar tahun 1945-1950-an, hidangan ini awalnya disajikan pada upacara desa atau hajatan. Seiring waktu, para perempuan desa mulai menjualnya secara turun temurun, dengan penjual berkeliling dari kampung ke kampung, sampai akhirnya banyak yang menetap di satu lokasi pada tahun 1980-an. Seporsi nasi Boran terdiri dari nasi putih yang dibumbui rempah, lauk seperti ayam, jeroan, ikan bandeng, telur dadar, tahu, tempe, dan disajikan dengan kremesan serta rempeyek. Ciri khas nasi Boran adalah empuk, pletuk, dan ikan sili yang tidak ditemukan pada menu lain. Bumbunya umumnya mengandung rempah seperti kemiri, ketumbar, kunyit, bawang merah, dan bawang putih, disajikan di atas boran yang dilapisi daun pisang. Nasi Boran juga telah ditetapkan sebagai warisan kuliner milik Pemkab Lamongan oleh Kemenkumham.</p>
+                    <img src="https://i.imgur.com/iLpUrRX.jpeg" class="w-full rounded-xl my-6 shadow-md" alt="Nasi BoranS">
+                `
+            },
+            wisata: {
+                title: "Wisata Ikonik Lamongan",
+                image: "https://i.imgur.com/ClvQoGR.jpeg",
+                content: `
+                    <h3 class="font-poppins text-3xl font-bold mb-4 color-accent">Wisata Bahari Lamongan</h3>
+                    <p class="mb-4 text-lg">Wisata Bahari Lamongan (WBL) adalah destinasi wisata unggulan di Lamongan, Jawa Timur, yang terletak di tepi laut. WBL menawarkan berbagai atraksi keluarga, termasuk kolam renang, taman bermain, dan pertunjukan lumba-lumba. Dikelilingi oleh keindahan alam, pengunjung dapat menikmati sunset dan sering menemukan acara budaya lokal. Dengan fasilitas lengkap, WBL menjadi pilihan menarik untuk bersantai dan bersenang-senang.</p>
+                    <h4 class="font-poppins text-2xl font-semibold mb-3 color-primary">Goa Maharani</h4>
+                    <p class="mb-4">Goa Maharani adalah objek wisata terkenal di Lamongan, Jawa Timur, yang dikenal dengan keindahan stalaktit dan stalagmitnya. Suasana sejuk dan mistis di dalam goa menawarkan pengalaman menjelajah yang unik. Dilengkapi dengan fasilitas untuk keluarga dan sering mengadakan pertunjukan seni, Goa Maharani menarik bagi pecinta alam dan wisatawan.</p>
+                `
+            },
+            seni: {
+                title: "Seni & Tradisi Lamongan",
+                image: "https://i.imgur.com/7GIpNcH.jpeg",
+                content: `
+                    <h3 class="font-poppins text-3xl font-bold mb-4 color-accent">Tari Boranan</h3>
+                    <p class="mb-4 text-lg">Tari Boran adalah tarian tradisional dari Lamongan, Jawa Timur, yang terinspirasi dari kehidupan para penjual nasi boran. Tarian ini menggambarkan aktivitas penjual nasi boran saat menjajakan dagangannya dan berinteraksi dengan pembeli. Diciptakan pada tahun 2006 oleh Tri Kristiani dan Ninin Desinta, tarian ini kaya akan nilai seni, budaya, dan filosofi. Tari Boran sering ditampilkan dalam acara daerah dan festival budaya, serta meraih berbagai prestasi di tingkat provinsi dan nasional.</p>
+                `
+            }
+
+            // Tambahkan story lain di sini...
+        };
+
+        const storyKeys = Object.keys(stories);
+        let currentStoryIndex = 0;
+
+        function renderStory() {
+            const key = storyKeys[currentStoryIndex];
+            const story = stories[key];
+            const contentDiv = document.getElementById('story-content');
+            
+            contentDiv.innerHTML = `
+                <img src="${story.image}" class="w-full rounded-2xl shadow-xl mb-6" alt="Hero Image Story">
+                <h2 class="font-poppins text-4xl font-extrabold mb-6 color-primary">${story.title}</h2>
+                ${story.content}
+            `;
+
+            // Update Navigasi
+            document.getElementById('prev-story').onclick = prevStory;
+            document.getElementById('next-story').onclick = nextStory;
+
+            const prevBtn = document.getElementById('prev-story');
+            const nextBtn = document.getElementById('next-story');
+
+            prevBtn.classList.toggle('opacity-50', currentStoryIndex === 0);
+            prevBtn.classList.toggle('cursor-not-allowed', currentStoryIndex === 0);
+            prevBtn.disabled = (currentStoryIndex === 0);
+
+            // Jika ini story terakhir, tombol next ganti menjadi to-3d-viewer
+            if (currentStoryIndex === storyKeys.length - 1) {
+                nextBtn.classList.add('hidden');
+                document.getElementById('to-3d-viewer').classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                document.getElementById('to-3d-viewer').classList.add('hidden');
+            }
+        }
+
+        function nextStory() {
+            if (currentStoryIndex < storyKeys.length - 1) {
+                currentStoryIndex++;
+                renderStory();
+            }
+        }
+
+        function prevStory() {
+            if (currentStoryIndex > 0) {
+                currentStoryIndex--;
+                renderStory();
+            }
+        }
+
+        function showStory(key) {
+             const index = storyKeys.indexOf(key);
+             if (index !== -1) {
+                currentStoryIndex = index;
+                renderStory();
+                showPage('storytelling');
+             }
+        }
+
+        // Initialize first story on load
+        document.addEventListener('DOMContentLoaded', () => {
+             // For initial state (before user clicks anything)
+             renderStory(); 
+        });
+
+        // =================================================================================
+        // JAVASCRIPT: LOGIKA THREE.JS (3D VIEWER)
+        // =================================================================================
+    
+
+        function initThreeJS() {
+    const container = document.getElementById("viewer3d-canvas");
+    if (!container) return;
+
+    // Cegah double init saat buka tab berkali-kali
+    if (window.__threeInitialized) return;
+    window.__threeInitialized = true;
+
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x2B2B2B);
+
+    // Camera
+    camera = new THREE.PerspectiveCamera(
+        60,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        200
+    );
+    camera.position.set(0, 2.5, 9);
+
+    // Renderer
+    renderer = new THREE.WebGLRenderer({
+        canvas: container,
+        antialias: true
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(2, 5, 5);
+    scene.add(light);
+
+    // GLB Model Loader
+    const loader = new THREE.GLTFLoader();
+
+    loader.load(
+        "https://files.catbox.moe/o6y4yp.glb",
+
+        function (gltf) {
+            object3D = gltf.scene;
+
+            // Autoscale
+            const box = new THREE.Box3().setFromObject(object3D);
+            const size = box.getSize(new THREE.Vector3()).length();
+            const scale = 3 / size;
+            object3D.scale.setScalar(scale * 10);
+
+            object3D.position.y = -1;
+
+            scene.add(object3D);
+            console.log("Model 3D berhasil dimuat!");
+        },
+
+        xhr => console.log((xhr.loaded / xhr.total * 100).toFixed(0) + "%"),
+        error => console.error("ERROR load GLB:", error)
+    );
+
+    // Controls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.04;
+    controls.minDistance = 6;
+    controls.maxDistance = 20;
+    controls.addEventListener("start", () => autoSpin = false);
+    controls.addEventListener("end", () => autoSpin = true);
+
+    // Resize update
+    window.addEventListener("resize", () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+
+        if (object3D && autoSpin) {
+            object3D.rotation.y += 0.004;
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    animate();
+}
+
+          
+          
+          
+          
+           
+        // Catatan: initThreeJS() akan dipanggil saat showPage('viewer3d') dipanggil.
+
+        // =================================================================================
+        // JAVASCRIPT: LOGIKA MINI QUIZ
+        // =================================================================================
+        const quizData = [
+    {
+        question: "Apa julukan Lamongan yang terkenal terkait dengan kuliner khasnya?",
+        options: ["Kota Bandeng", "Kota Soto", "Kota Udang", "Kota Petis"],
+        answer: "Kota Soto"
+    },
+    {
+        question: "Siapakah tokoh legenda yang terkenal karena melawan kesewenang-wenangan tuan tanah di Lamongan?",
+        options: ["Aryo Penangsang", "Kadet Soewoko", "Joko Tingkir", "Angling Darmo"],
+        answer: "Kadet Soewoko"
+    },
+    {
+        question: "Destinasi wisata bahari unggulan Lamongan adalah...",
+        options: ["Pantai Kenjeran", "Taman Safari", "Wisata Bahari Lamongan (WBL)", "Jatim Park"],
+        answer: "Wisata Bahari Lamongan (WBL)"
+    }
+    
+];
+
+let currentQuestionIndex = 0;
+let score = 0;
+
+function loadQuestion() {
+    if (currentQuestionIndex < quizData.length) {
+        const data = quizData[currentQuestionIndex];
+        document.getElementById('question-text').textContent =
+            (currentQuestionIndex + 1) + ". " + data.question;
+
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = ''; // Bersihkan opsi sebelumnya
+
+        data.options.forEach((option) => {
+            const button = document.createElement('button');
+            button.textContent = option;
+            button.classList.add(
+                'quiz-option', 'w-full', 'text-left', 'p-4',
+                'rounded-xl', 'bg-gray-100', 'hover:bg-primary/10',
+                'transition', 'duration-200', 'font-inter', 'shadow-sm'
+            );
+            button.setAttribute('data-option', option);
+            button.onclick = () => selectOption(button);
+            optionsContainer.appendChild(button);
+        });
+
+        const submitBtn = document.getElementById('submit-quiz');
+        submitBtn.textContent = 'Jawab';
+        submitBtn.onclick = submitAnswer;
+    } else {
+        showResults();
+    }
+}
+
+function selectOption(selectedButton) {
+    document.querySelectorAll('.quiz-option').forEach(btn => {
+        btn.classList.remove('selected-option', 'bg-primary/20', 'border-2', 'border-primary');
+    });
+    selectedButton.classList.add('selected-option', 'bg-primary/20', 'border-2', 'border-primary');
+}
+
+function submitAnswer() {
+    const selectedOption = document.querySelector('.selected-option');
+    if (!selectedOption) {
+        alertError("Silakan pilih salah satu jawaban terlebih dahulu.");
+        return;
+    }
+
+    const answer = selectedOption.getAttribute('data-option');
+    const correctAnswer = quizData[currentQuestionIndex].answer;
+
+    document.querySelectorAll('.quiz-option').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('hover:bg-primary/10');
+
+        if (btn.getAttribute('data-option') === correctAnswer) {
+            btn.classList.add('bg-green-100', 'border-2', 'border-green-500');
+        } else if (btn.getAttribute('data-option') === answer) {
+            btn.classList.add('bg-red-100', 'border-2', 'border-red-500');
+        }
+    });
+
+    if (answer === correctAnswer) score++;
+
+    const submitBtn = document.getElementById('submit-quiz');
+    submitBtn.textContent = 'Lanjut →';
+    submitBtn.onclick = nextQuestion;
+}
+
+function nextQuestion() {
+    currentQuestionIndex++;
+    loadQuestion();
+}
+
+function showResults() {
+    document.getElementById('quiz-area').classList.add('hidden');
+    const resultArea = document.getElementById('result-area');
+    resultArea.classList.remove('hidden');
+
+    document.getElementById('score-display').textContent =
+        `${score}/${quizData.length}`;
+
+    let message = '';
+    if (score === quizData.length) {
+        message = `Selamat! Anda mendapatkan Badge "Ahli Budaya Lamongan" luar biasa! 🏆`;
+    } else if (score >= quizData.length / 2) {
+        message = `Bagus! Pengetahuan Anda tentang Lamongan sudah baik. Tingkatkan lagi!`;
+    } else {
+        message = `Anda perlu menjelajahi cerita-cerita Lamongan lebih dalam. Semangat mencoba lagi!`;
+    }
+
+    document.getElementById('badge-message').textContent = message;
+}
+
+function resetQuiz() {
+    currentQuestionIndex = 0;
+    score = 0;
+    document.getElementById('result-area').classList.add('hidden');
+    document.getElementById('quiz-area').classList.remove('hidden');
+    loadQuestion();
+}
+
+// Custom Error Message
+function alertError(message) {
+    console.error("ERROR: " + message);
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = message;
+    tempDiv.classList.add(
+        'fixed', 'bottom-5', 'right-5', 'bg-red-500', 'text-white',
+        'p-4', 'rounded-lg', 'shadow-xl', 'z-50', 'transition-opacity', 'duration-300'
+    );
+    document.body.appendChild(tempDiv);
+    setTimeout(() => {
+        tempDiv.style.opacity = '0';
+        setTimeout(() => tempDiv.remove(), 300);
+    }, 2500);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    loadQuestion();         // memuat soal pertama
+});
+// =================================================================================
+// INISIALISASI QUIZ SETELAH HALAMAN SELESAI DILOAD
+// =================================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    loadQuestion();
+});
+
+    let scene, camera, renderer, object3D, controls, autoSpin = true;
+
+    </script>
+</body>
+</html
